@@ -23,34 +23,16 @@ class Whiteboard extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      endpoint: "localhost:5000",
-      socket: this.props.socket,
       collapsed: false,
     };
     this.whiteboard = React.createRef();
+    this.context = React.createRef();
   }
 
   componentDidMount() {
-    // this.state.socket.on("change backgroundColor", (backgroundCol) => {
-    //   console.log("change backgroundcol");
-    //   this.setState({
-    //     backgroundColor: backgroundCol,
-    //   });
-    // });
-    // this.state.socket.on("change fillWithBackgroundColor", (fillBg) => {
-    //   console.log("change fillbg");
-    //   this.setState({
-    //     fillWithBackgroundColor: fillBg,
-    //   });
-    // });
-    // this.state.socket.on("new drawing", (drawing) => {
-    //   console.log("new drawing");
-    //   console.log(drawing);
-    //   this._sketch.addImg(drawing);
-    // });
-
     this.setState({
       whiteboard: this.whiteboard.current,
+      context: this.whiteboard.current.getContext("2d"),
     });
 
     this.whiteboard.current.addEventListener(
@@ -80,10 +62,18 @@ class Whiteboard extends Component {
 
     this.whiteboard.current.addEventListener("touchend", this.onMouseUp, false);
     window.addEventListener("resize", this.onResize);
-    this.state.socket.on("drawing", (data) => {
+
+    this.props.socket.on("drawing", (data) => {
       if (!isNaN(data.x0) && !isNaN(data.y0)) {
         this.drawLine(data.x0, data.y0, data.x1, data.y1, data.color);
       }
+    });
+
+    this.props.socket.on("clear", () => {
+      console.log("received to clear");
+      this.state.whiteboard
+        .getContext("2d")
+        .clearRect(0, 0, window.innerWidth, window.innerHeight);
     });
   }
 
@@ -106,13 +96,13 @@ class Whiteboard extends Component {
 
     this.setState(() => {
       if (!isNaN(x0)) {
-        this.state.socket.emit("drawing", {
+        this.props.socket.emit("drawing", {
           x0: x0,
           y0: y0,
           x1: x1,
           y1: y1,
           color: color,
-          room: this.state.room,
+          room: this.props.room,
           force: force,
         });
 
@@ -153,7 +143,6 @@ class Whiteboard extends Component {
     }
     const offsetLeft = e.clientX - this.whiteboard.current.offsetLeft;
     const offsetTop = e.clientY - this.whiteboard.current.offsetTop;
-    console.log(this.props.strokeColor);
     this.setState(() => {
       return {
         currentX: offsetLeft,
@@ -201,46 +190,16 @@ class Whiteboard extends Component {
     };
   };
 
-  // selectColor = (color) => {
-  //   this.setState(() => {
-  //     socket.emit("color-change", {
-  //       id: this.state.id,
-  //       username: this.state.username,
-  //       room: this.state.room,
-  //       color: color.hex,
-  //     });
-  //     return {
-  //       strokeColor: color.hex,
-  //     };
-  //   });
-  // };
-
-  // clearBoard = () => {
-  //   socket.emit("clear", this.state.room);
-  // };
-
   // leave = () => {
-  //   socket.emit("leaveroom", { id: this.state.id, room: this.state.room });
+  //   socket.emit("leaveroom", { id: this.state.id, room: this.props.room });
   // };
-
-  _onDrawingChange = (e) => {
-    const drawItem = this._sketch.toDataURL();
-    this.state.socket.emit("new drawing", drawItem);
-  };
-
-  // sending sockets
-  // send = () => {
-  //   const socket = socketIOClient(this.state.endpoint);
-  //   socket.emit("change backgroundColor", this.state.backgroundColor); // change 'red' to this.state.color
-  // };
-  ///
 
   // adding the function
   setFillWithBackgroundColor = () => {
     this.setState(
       { fillWithBackgroundColor: !this.state.fillWithBackgroundColor },
       () => {
-        this.state.socket.emit(
+        this.props.socket.emit(
           "change fillWithBackgroundColor",
           this.state.fillWithBackgroundColor
         );
@@ -251,7 +210,7 @@ class Whiteboard extends Component {
   // adding the function
   setBackgroundColor = (backgroundColor) => {
     this.setState({ backgroundColor }, () => {
-      this.state.socket.emit(
+      this.props.socket.emit(
         "change backgroundColor",
         this.state.backgroundColor
       );

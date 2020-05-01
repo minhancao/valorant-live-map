@@ -40,3 +40,13 @@
 .site-layout .site-layout-background {
   background: #fff;
 }
+
+.sider-width {
+  width: "60%";
+}
+
+@media only screen and (max-device-width: 667px) {
+  .sider-width {
+    width: "70%";
+  }
+}
