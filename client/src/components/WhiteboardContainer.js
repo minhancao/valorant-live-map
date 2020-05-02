@@ -1,6 +1,6 @@
 // Updated. Thanks to: Paul Luna
 import React, { Component } from "react";
-import socketIOClient from "socket.io-client";
+import io from "socket.io-client";
 import { Layout, Menu, Button, Switch, Tooltip, List } from "antd";
 import { TeamOutlined } from "@ant-design/icons";
 import { CompactPicker } from "react-color";
@@ -14,7 +14,7 @@ import "./WhiteboardContainer.css";
 
 const { Content, Sider, Header } = Layout;
 
-const socket = socketIOClient("localhost:5000"); //development;
+const socket = io();
 
 class WhiteboardContainer extends Component {
   constructor(props) {
