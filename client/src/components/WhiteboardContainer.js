@@ -1,15 +1,8 @@
 // Updated. Thanks to: Paul Luna
 import React, { Component } from "react";
 import socketIOClient from "socket.io-client";
-import { SketchField, Tools } from "react-sketch";
-import { Layout, Menu, Input, Button, Switch, Tooltip, List } from "antd";
-import {
-  UploadOutlined,
-  BgColorsOutlined,
-  EditOutlined,
-  ClearOutlined,
-  TeamOutlined,
-} from "@ant-design/icons";
+import { Layout, Menu, Button, Switch, Tooltip, List } from "antd";
+import { TeamOutlined } from "@ant-design/icons";
 import { CompactPicker } from "react-color";
 import "antd/dist/antd.css"; // or 'antd/dist/antd.less'
 import Whiteboard from "./Whiteboard";
@@ -20,7 +13,6 @@ import SplitMap from "./imgs/split.svg";
 import "./WhiteboardContainer.css";
 
 const { Content, Sider, Header } = Layout;
-const { SubMenu } = Menu;
 
 const socket = socketIOClient("localhost:5000"); //development;
 
@@ -37,6 +29,9 @@ class WhiteboardContainer extends Component {
       username: null,
       room: null,
       userList: [],
+      drawings: [],
+      redo: [],
+      undo: [],
     };
 
     this.updatePredicate = this.updatePredicate.bind(this);
@@ -54,7 +49,10 @@ class WhiteboardContainer extends Component {
         id: joined.id,
         username: joined.username,
         room: joined.room,
+        drawings: joined.drawings,
+        redo: joined.redo,
       });
+
       console.log(this.state.room);
     });
 
@@ -76,11 +74,35 @@ class WhiteboardContainer extends Component {
         fillWithBackgroundColor: fillBg,
       });
     });
+
+    socket.on("redo", (room) => {
+      this.redo();
+    });
+
+    socket.on("undo", (room) => {
+      this.undo();
+    });
   }
 
   componentDidMount() {
     this.updatePredicate();
     window.addEventListener("resize", this.updatePredicate);
+    var reader = new FileReader();
+    document
+      .getElementById("loadFromJson")
+      .addEventListener("change", function () {
+        if (this.files[0]) {
+          // read the contents of the first file in the <input type="file">
+          reader.readAsText(this.files[0]);
+        }
+      });
+
+    // this function executes when the contents of the file have been fetched
+    reader.onload = function () {
+      var data = JSON.parse(reader.result);
+      var currDrawings = data.drawings;
+      socket.emit("loadFromJson", this.state.room, currDrawings);
+    }.bind(this);
   }
 
   componentWillUnmount() {
@@ -151,9 +173,158 @@ class WhiteboardContainer extends Component {
     this.props.clearRoom();
   };
 
-  saveAsJson = () => {};
+  saveAsDataURL = () => {
+    // retrieve the canvas data
+    var canvas = this.whiteboard.current.whiteboard.current;
+    var canvasContents = canvas.toDataURL(); // a data URL of the current canvas image
 
-  loadFromJson = () => {};
+    // create a blob object representing the data as a JSON string
+    var file = new Blob([canvasContents], {
+      type: "text",
+    });
+
+    // trigger a click event on an <a> tag to open the file explorer
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(file);
+    a.download = "data.txt";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
+  saveAsJson = () => {
+    // retrieve the canvas data
+    var data = { drawings: this.state.drawings };
+    var string = JSON.stringify(data);
+    // create a blob object representing the data as a JSON string
+    var file = new Blob([string], {
+      type: "application/json",
+    });
+    // trigger a click event on an <a> tag to open the file explorer
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(file);
+    a.download = "data.json";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
+  clearWhiteboard = () => {
+    var canvas = this.whiteboard.current.whiteboard.current;
+    var ctx = canvas.getContext("2d");
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  };
+
+  clearDrawingsAndRedo = () => {
+    this.setState({ drawings: [], redo: [] });
+  };
+
+  drawOnWhiteboard = (x0, y0, x1, y1, color) => {
+    var canvas = this.whiteboard.current.whiteboard.current;
+    var ctx = canvas.getContext("2d");
+    ctx.beginPath();
+    ctx.moveTo(x0, y0);
+    ctx.lineTo(x1, y1);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.closePath();
+  };
+
+  drawStartBoard = () => {
+    var currDrawings = this.state.drawings;
+    var i = 0;
+    var j = 0;
+    for (i = 0; i < currDrawings.length; i++) {
+      var data = currDrawings[i];
+      for (j = 0; j < data.length; j++) {
+        var data2 = data[j];
+        var { x0, y0, x1, y1, color } = data2;
+        this.drawOnWhiteboard(x0, y0, x1, y1, color);
+      }
+    }
+  };
+
+  handleLoadFromJson = (currDrawings) => {
+    this.setState({ drawings: currDrawings });
+    this.clearWhiteboard();
+    var i = 0;
+    var j = 0;
+    for (i = 0; i < currDrawings.length; i++) {
+      var data = currDrawings[i];
+      for (j = 0; j < data.length; j++) {
+        var data2 = data[j];
+        var { x0, y0, x1, y1, color } = data2;
+        this.drawOnWhiteboard(x0, y0, x1, y1, color);
+      }
+    }
+  };
+
+  pushToDrawings = (data) => {
+    var currDrawings = this.state.drawings;
+    currDrawings.push(data);
+    this.setState({ drawings: currDrawings, redo: [] });
+    console.log(currDrawings);
+  };
+
+  undoEmit = () => {
+    socket.emit("undo", this.state.room);
+  };
+
+  redoEmit = () => {
+    socket.emit("redo", this.state.room);
+  };
+
+  undo = () => {
+    if (this.state.drawings.length === 0) {
+      return;
+    }
+
+    var currDrawings = this.state.drawings;
+    var poppedItem = currDrawings.pop();
+
+    var currRedo = this.state.redo;
+    currRedo.push(poppedItem);
+
+    this.clearWhiteboard();
+    var i = 0;
+    var j = 0;
+    for (i = 0; i < currDrawings.length; i++) {
+      var data = currDrawings[i];
+      for (j = 0; j < data.length; j++) {
+        var data2 = data[j];
+        var { x0, y0, x1, y1, color } = data2;
+        this.drawOnWhiteboard(x0, y0, x1, y1, color);
+      }
+    }
+    console.log("Curr drawing size after undo: " + currDrawings.length);
+    this.setState({ drawings: currDrawings, redo: currRedo });
+  };
+
+  redo = () => {
+    if (this.state.redo.length === 0) {
+      return;
+    }
+    var currRedo = this.state.redo;
+    var poppedItem = currRedo.pop();
+
+    var currDrawings = this.state.drawings;
+    currDrawings.push(poppedItem);
+
+    this.clearWhiteboard();
+    var i = 0;
+    var j = 0;
+    for (i = 0; i < currDrawings.length; i++) {
+      var data = currDrawings[i];
+      for (j = 0; j < data.length; j++) {
+        var data2 = data[j];
+        var { x0, y0, x1, y1, color } = data2;
+        this.drawOnWhiteboard(x0, y0, x1, y1, color);
+      }
+    }
+    console.log("Curr drawing size after redo: " + currDrawings.length);
+    this.setState({ drawings: currDrawings, redo: currRedo });
+  };
 
   render() {
     // testing for socket connections
@@ -215,7 +386,7 @@ class WhiteboardContainer extends Component {
                 </Tooltip>
               </Menu.Item>
 
-              <Menu.Item key="-1" disabled={true} style={{ float: "right" }}>
+              <Menu.Item key="-6" disabled={true} style={{ float: "right" }}>
                 Count: {this.state.userList.length}
               </Menu.Item>
               <Menu.Item key="0" disabled={true} style={{ float: "right" }}>
@@ -266,8 +437,8 @@ class WhiteboardContainer extends Component {
                   key="5"
                   icon={
                     <div>
-                      <Button>Undo</Button>
-                      <Button>Redo</Button>
+                      <Button onClick={() => this.undoEmit()}>Undo</Button>
+                      <Button onClick={() => this.redoEmit()}>Redo</Button>
                       <Button onClick={() => this.clearBoard()}>Clear</Button>
                     </div>
                   }
@@ -276,19 +447,21 @@ class WhiteboardContainer extends Component {
                   key="6"
                   icon={
                     <div>
-                      <Button onClick={this.saveAsJson}>Save as JSON</Button>
-                      <Button onClick={this.loadFromJson}>
+                      <Button onClick={() => this.saveAsJson()}>
+                        Save as JSON
+                      </Button>
+                      <input
+                        type="file"
+                        id="loadFromJson"
+                        style={{ display: "none" }}
+                      />
+                      <Button
+                        onClick={() =>
+                          document.getElementById("loadFromJson").click()
+                        }
+                      >
                         Load from JSON
                       </Button>
-                    </div>
-                  }
-                ></Menu.Item>
-                <Menu.Item
-                  key="7"
-                  icon={
-                    <div>
-                      <Button>Save as DataURL</Button>
-                      <Button>Load from DataURL</Button>
                     </div>
                   }
                 ></Menu.Item>
@@ -332,6 +505,15 @@ class WhiteboardContainer extends Component {
                     strokeColor={this.state.strokeColor}
                     username={this.state.username}
                     room={this.state.room}
+                    ref={this.whiteboard}
+                    drawings={this.state.drawings}
+                    redo={this.state.redo}
+                    undo={this.state.undo}
+                    pushToDrawings={this.pushToDrawings}
+                    clearDrawingsAndRedo={this.clearDrawingsAndRedo}
+                    drawStartBoard={this.drawStartBoard}
+                    clearWhiteboard={this.clearWhiteboard}
+                    handleLoadFromJson={this.handleLoadFromJson}
                   ></Whiteboard>
                 </div>
               </Content>

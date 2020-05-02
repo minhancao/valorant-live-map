@@ -1,9 +1,7 @@
 const express = require("express");
 const http = require("http");
 const socketIO = require("socket.io");
-
-// our localhost port
-const port = 5000;
+const path = require("path");
 
 const app = express();
 
@@ -16,6 +14,9 @@ const io = socketIO(server);
 let onlineCount = 0;
 
 let users = [];
+
+let drawings = {};
+let redo = {};
 
 // This is what the socket.io syntax is like, we will work this later
 io.sockets.on("connection", (socket) => {
@@ -32,10 +33,18 @@ io.sockets.on("connection", (socket) => {
     addedToList = true;
     color = "black";
     room = join.room;
+
+    if (!drawings[room]) {
+      drawings[room] = [];
+      redo[room] = [];
+    }
+
     join.color = color;
     users.push(join);
     socket.join(join.room);
     socket.userId = join.id;
+    join.drawings = drawings[room];
+    join.redo = redo[room];
     socket.emit("joined", join);
     currentUsersInRoom = users.filter((user) => {
       if (user.room === room) {
@@ -81,8 +90,40 @@ io.sockets.on("connection", (socket) => {
     io.in(data.room).emit("users", currentUsersInThisRoom);
   });
 
-  socket.on("clear", (clear) => {
-    io.in(clear).emit("clear", clear);
+  socket.on("clear", (room) => {
+    drawings[room] = [];
+    redo[room] = [];
+    io.in(room).emit("clear", room);
+  });
+
+  socket.on("pushToDrawings", (room, drawing) => {
+    drawings[room].push(drawing);
+    redo[room] = [];
+    io.in(room).emit("pushToDrawings", room, drawing);
+  });
+
+  socket.on("undo", (room) => {
+    if (drawings[room].length === 0) {
+      return;
+    }
+    const poppedItem = drawings[room].pop();
+    redo[room].push(poppedItem);
+    io.in(room).emit("undo", room);
+  });
+
+  socket.on("redo", (room) => {
+    if (redo[room].length === 0) {
+      return;
+    }
+    const poppedItem = redo[room].pop();
+    drawings[room].push(poppedItem);
+    io.in(room).emit("redo", room);
+  });
+
+  socket.on("loadFromJson", (room, currDrawings) => {
+    redo[room] = [];
+    drawings[room] = currDrawings;
+    io.in(room).emit("loadFromJson", room, currDrawings);
   });
 
   socket.on("disconnect", () => {
@@ -140,4 +181,14 @@ io.sockets.on("connection", (socket) => {
   });
 });
 
+if (process.env.NODE_ENV === "production") {
+  //set static folder
+  app.use(express.static("client/build"));
+
+  app.get("*", (req, res) => {
+    res.sendFile(path.resolve(__dirname, "client", "build", "index.html"));
+  });
+}
+
+const port = process.env.PORT || 5000;
 server.listen(port, () => console.log(`Listening on port ${port}`));

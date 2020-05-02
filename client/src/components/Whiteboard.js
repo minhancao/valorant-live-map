@@ -1,29 +1,14 @@
 // Updated. Thanks to: Paul Luna
 import React, { Component } from "react";
-import socketIOClient from "socket.io-client";
-import { SketchField, Tools } from "react-sketch";
-import { Layout, Menu, Breadcrumb, Input, Button, Switch } from "antd";
-import {
-  DesktopOutlined,
-  PieChartOutlined,
-  FileOutlined,
-  TeamOutlined,
-  UserOutlined,
-  UploadOutlined,
-  BgColorsOutlined,
-} from "@ant-design/icons";
-import { CompactPicker } from "react-color";
-import "antd/dist/antd.css"; // or 'antd/dist/antd.less'
-import CanvasDraw from "react-canvas-draw";
 
-const { Header, Content, Footer, Sider } = Layout;
-const { SubMenu } = Menu;
+import "antd/dist/antd.css"; // or 'antd/dist/antd.less'
 
 class Whiteboard extends Component {
   constructor(props) {
     super(props);
     this.state = {
       collapsed: false,
+      currDrawing: [],
     };
     this.whiteboard = React.createRef();
     this.context = React.createRef();
@@ -74,6 +59,17 @@ class Whiteboard extends Component {
       this.state.whiteboard
         .getContext("2d")
         .clearRect(0, 0, window.innerWidth, window.innerHeight);
+      this.props.clearDrawingsAndRedo();
+    });
+
+    this.props.socket.on("pushToDrawings", (room, drawing) => {
+      this.props.pushToDrawings(drawing);
+      this.props.clearWhiteboard();
+      this.props.drawStartBoard();
+    });
+    this.props.socket.on("loadFromJson", (room, currDrawings) => {
+      this.props.clearWhiteboard();
+      this.props.handleLoadFromJson(currDrawings);
     });
   }
 
@@ -84,15 +80,26 @@ class Whiteboard extends Component {
     context.lineTo(x1, y1);
     context.strokeStyle = color;
     context.lineWidth = 2;
-    // if (force) {
-    // 	context.lineWidth = 1.75 * (force * (force + 3.75));
-    // }
     context.stroke();
     context.closePath();
 
     if (!emit) {
       return;
     }
+
+    const data = {
+      x0: x0,
+      y0: y0,
+      x1: x1,
+      y1: y1,
+      color: color,
+      emit: emit,
+      force: force,
+    };
+
+    var currDrawing = this.state.currDrawing;
+    currDrawing.push(data);
+    this.setState({ currDrawing });
 
     this.setState(() => {
       if (!isNaN(x0)) {
@@ -135,6 +142,12 @@ class Whiteboard extends Component {
         currentY: offsetTop,
       };
     });
+    const currDrawing = this.state.currDrawing;
+    if (currDrawing.length > 0 && !this.state.drawing) {
+      this.props.socket.emit("pushToDrawings", this.props.room, currDrawing);
+    }
+
+    this.setState({ currDrawing: [] });
   };
 
   onMouseMove = (e) => {
@@ -188,79 +201,6 @@ class Whiteboard extends Component {
         callback.apply(null, arguments);
       }
     };
-  };
-
-  // leave = () => {
-  //   socket.emit("leaveroom", { id: this.state.id, room: this.props.room });
-  // };
-
-  // adding the function
-  setFillWithBackgroundColor = () => {
-    this.setState(
-      { fillWithBackgroundColor: !this.state.fillWithBackgroundColor },
-      () => {
-        this.props.socket.emit(
-          "change fillWithBackgroundColor",
-          this.state.fillWithBackgroundColor
-        );
-      }
-    );
-  };
-
-  // adding the function
-  setBackgroundColor = (backgroundColor) => {
-    this.setState({ backgroundColor }, () => {
-      this.props.socket.emit(
-        "change backgroundColor",
-        this.state.backgroundColor
-      );
-    });
-  };
-
-  onCollapse = (collapsed) => {
-    console.log(collapsed);
-    this.setState({ collapsed });
-  };
-
-  _onBackgroundImageDrop = (accepted /*, rejected*/) => {
-    if (accepted && accepted.length > 0) {
-      let reader = new FileReader();
-      let { stretched, stretchedX, stretchedY, originX, originY } = this.state;
-      reader.addEventListener(
-        "load",
-        () =>
-          this._sketch.setBackgroundFromDataUrl(reader.result, {
-            stretched: stretched,
-            stretchedX: stretchedX,
-            stretchedY: stretchedY,
-            originX: originX,
-            originY: originY,
-          }),
-        false
-      );
-      reader.readAsDataURL(accepted[0]);
-    }
-  };
-
-  _onImageDrop = (accepted /*, rejected*/) => {
-    if (accepted && accepted.length > 0) {
-      let reader = new FileReader();
-      let { stretched, stretchedX, stretchedY, originX, originY } = this.state;
-      reader.addEventListener(
-        "load",
-        () => this._sketch.addImg(reader.result),
-        false
-      );
-      console.log(reader.readAsDataURL(accepted[0]));
-    }
-  };
-
-  _onSketchChange = () => {
-    let prev = this.state.canUndo;
-    let now = this._sketch.canUndo();
-    if (prev !== now) {
-      this.setState({ canUndo: now });
-    }
   };
 
   render() {

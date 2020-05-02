@@ -2,7 +2,7 @@
 import React, { Component } from "react";
 import WhiteboardContainer from "./components/WhiteboardContainer";
 import "./App.css";
-import { Form, Input, Button, Checkbox } from "antd";
+import { Form, Input, Button } from "antd";
 
 const layout = {
   labelCol: { span: 8 },

@@ -8,11 +8,9 @@
     "@testing-library/user-event": "^7.2.1",
     "antd": "^4.2.0",
     "react": "^16.13.1",
-    "react-canvas-draw": "^1.1.1",
     "react-color": "^2.18.0",
     "react-dom": "^16.13.1",
     "react-scripts": "3.4.1",
-    "react-sketch": "^0.5.1",
     "socket.io-client": "^2.3.0"
   },
   "scripts": {
@@ -21,6 +19,7 @@
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
+  "proxy": "http://localhost:5000",
   "eslintConfig": {
     "extends": "react-app"
   },
