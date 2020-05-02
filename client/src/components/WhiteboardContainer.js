@@ -32,6 +32,7 @@ class WhiteboardContainer extends Component {
       drawings: [],
       redo: [],
       undo: [],
+      selectedMap: "1",
     };
 
     this.updatePredicate = this.updatePredicate.bind(this);
@@ -81,6 +82,10 @@ class WhiteboardContainer extends Component {
 
     socket.on("undo", (room) => {
       this.undo();
+    });
+
+    socket.on("mapChange", (mapItem, selected) => {
+      this.setState({ map: mapItem, selectedMap: selected });
     });
   }
 
@@ -339,23 +344,35 @@ class WhiteboardContainer extends Component {
               title="Hey"
               theme="dark"
               mode="horizontal"
-              defaultSelectedKeys={["1"]}
+              selectedKeys={[this.state.selectedMap]}
             >
               <Menu.Item
                 key="1"
-                onClick={() => this.setState({ map: BindMap })}
+                id="bindmap"
+                onClick={() => {
+                  socket.emit("mapChange", this.state.room, BindMap, "1");
+                  this.setState({ map: BindMap, selectedMap: "1" });
+                }}
               >
                 Bind
               </Menu.Item>
               <Menu.Item
                 key="2"
-                onClick={() => this.setState({ map: HavenMap })}
+                id="havenmap"
+                onClick={() => {
+                  socket.emit("mapChange", this.state.room, HavenMap, "2");
+                  this.setState({ map: HavenMap, selectedMap: "2" });
+                }}
               >
                 Haven
               </Menu.Item>
               <Menu.Item
                 key="3"
-                onClick={() => this.setState({ map: SplitMap })}
+                id="splitmap"
+                onClick={() => {
+                  socket.emit("mapChange", this.state.room, SplitMap, "3");
+                  this.setState({ map: SplitMap, selectedMap: "3" });
+                }}
               >
                 Split
               </Menu.Item>
@@ -363,7 +380,7 @@ class WhiteboardContainer extends Component {
                 Leave Room
               </Menu.Item>
               <Menu.Item
-                key="-1"
+                key="5"
                 disabled={true}
                 style={{ float: "right", cursor: "pointer" }}
               >
@@ -386,10 +403,10 @@ class WhiteboardContainer extends Component {
                 </Tooltip>
               </Menu.Item>
 
-              <Menu.Item key="-6" disabled={true} style={{ float: "right" }}>
+              <Menu.Item key="6" disabled={true} style={{ float: "right" }}>
                 Count: {this.state.userList.length}
               </Menu.Item>
-              <Menu.Item key="0" disabled={true} style={{ float: "right" }}>
+              <Menu.Item key="7" disabled={true} style={{ float: "right" }}>
                 Room {this.props.room} | User: {this.props.username}
               </Menu.Item>
             </Menu>
@@ -405,9 +422,9 @@ class WhiteboardContainer extends Component {
               onCollapse={this.onCollapse}
             >
               <div className="logo" />
-              <Menu theme="light" defaultSelectedKeys={["1"]} mode="inline">
+              <Menu theme="light" defaultSelectedKeys={["8"]} mode="inline">
                 <Menu.Item
-                  key="3"
+                  key="8"
                   icon={
                     <div>
                       <CompactPicker
@@ -424,7 +441,7 @@ class WhiteboardContainer extends Component {
                   style={{ height: "100px" }}
                 ></Menu.Item>
                 <Menu.Item
-                  key="4"
+                  key="9"
                   icon={
                     <CompactPicker
                       color={this.state.strokeColor}
@@ -434,7 +451,7 @@ class WhiteboardContainer extends Component {
                   style={{ height: "100px" }}
                 ></Menu.Item>
                 <Menu.Item
-                  key="5"
+                  key="10"
                   icon={
                     <div>
                       <Button onClick={() => this.undoEmit()}>Undo</Button>
@@ -444,7 +461,7 @@ class WhiteboardContainer extends Component {
                   }
                 ></Menu.Item>
                 <Menu.Item
-                  key="6"
+                  key="11"
                   icon={
                     <div>
                       <Button onClick={() => this.saveAsJson()}>

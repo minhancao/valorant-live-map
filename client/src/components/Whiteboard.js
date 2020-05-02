@@ -41,7 +41,7 @@ class Whiteboard extends Component {
 
     this.whiteboard.current.addEventListener(
       "touchmove",
-      this.throttle(this.onMouseMove, 5),
+      this.throttle(this.onTouchMove, 5),
       false
     );
 
@@ -169,9 +169,8 @@ class Whiteboard extends Component {
       return;
     }
     console.log();
-    const offsetLeft =
-      e.touches[0].clientX - this.whiteboard.current.offsetLeft;
-    const offsetTop = e.touches[0].clientY - this.whiteboard.current.offsetTop;
+    const offsetLeft = e.touches[0].clientX;
+    const offsetTop = e.touches[0].clientY;
     this.setState(() => {
       this.drawLine(
         this.state.currentX,

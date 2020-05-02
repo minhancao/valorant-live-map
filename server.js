@@ -171,6 +171,10 @@ io.sockets.on("connection", (socket) => {
     socket.in(data.room).emit("drawing", data);
   });
 
+  socket.on("mapChange", (room, map, selected) => {
+    socket.in(room).emit("mapChange", map, selected);
+  });
+
   // disconnect is fired when a client leaves the server
   socket.on("disconnect", () => {
     console.log("user disconnected");
