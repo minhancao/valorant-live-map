@@ -41,7 +41,7 @@ class Whiteboard extends Component {
 
     this.whiteboard.current.addEventListener(
       "touchmove",
-      this.throttle(this.onTouchMove, 5),
+      this.throttle(this.onMouseMove, 5),
       false
     );
 
