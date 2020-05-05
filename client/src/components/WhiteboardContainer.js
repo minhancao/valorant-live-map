@@ -484,7 +484,7 @@ class WhiteboardContainer extends Component {
                 ></Menu.Item>
               </Menu>
             </Sider>
-            <Layout>
+            <Layout style={{ overflowY: "hidden" }}>
               <Content style={{ margin: "0 16px" }}>
                 <div
                   ref="drawArea"
@@ -492,7 +492,7 @@ class WhiteboardContainer extends Component {
                   style={{
                     padding: 24,
                     minHeight: 360,
-                    height: "100vh",
+                    height: "93vh",
                     backgroundColor: this.state.fillWithBackgroundColor
                       ? this.state.backgroundColor
                       : "transparent",
