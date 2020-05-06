@@ -20,6 +20,7 @@ class App extends Component {
       typing: "",
       room: "",
     };
+    document.body.style.overflow = "hidden";
   }
 
   onFinish = (values) => {
