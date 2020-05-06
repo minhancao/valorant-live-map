@@ -44,8 +44,6 @@ class WhiteboardContainer extends Component {
     });
 
     socket.on("joined", (joined) => {
-      console.log("joined: " + joined);
-      console.log(joined);
       this.setState({
         id: joined.id,
         username: joined.username,
@@ -53,8 +51,6 @@ class WhiteboardContainer extends Component {
         drawings: joined.drawings,
         redo: joined.redo,
       });
-
-      console.log(this.state.room);
     });
 
     socket.on("users", (users) => {
@@ -64,13 +60,11 @@ class WhiteboardContainer extends Component {
     });
 
     socket.on("change backgroundColor", (room, backgroundCol) => {
-      console.log("change backgroundcol");
       this.setState({
         backgroundColor: backgroundCol,
       });
     });
     socket.on("change fillWithBackgroundColor", (room, fillBg) => {
-      console.log("change fillbg");
       this.setState({
         fillWithBackgroundColor: fillBg,
       });
@@ -165,7 +159,6 @@ class WhiteboardContainer extends Component {
   };
 
   onCollapse = (collapsed) => {
-    console.log(collapsed);
     this.setState({ collapsed });
   };
 
@@ -269,7 +262,6 @@ class WhiteboardContainer extends Component {
     var currDrawings = this.state.drawings;
     currDrawings.push(data);
     this.setState({ drawings: currDrawings, redo: [] });
-    console.log(currDrawings);
   };
 
   undoEmit = () => {
@@ -302,7 +294,6 @@ class WhiteboardContainer extends Component {
         this.drawOnWhiteboard(x0, y0, x1, y1, color);
       }
     }
-    console.log("Curr drawing size after undo: " + currDrawings.length);
     this.setState({ drawings: currDrawings, redo: currRedo });
   };
 
@@ -327,7 +318,6 @@ class WhiteboardContainer extends Component {
         this.drawOnWhiteboard(x0, y0, x1, y1, color);
       }
     }
-    console.log("Curr drawing size after redo: " + currDrawings.length);
     this.setState({ drawings: currDrawings, redo: currRedo });
   };
 
@@ -341,7 +331,7 @@ class WhiteboardContainer extends Component {
         <Layout style={{ minHeight: "100vh" }}>
           <Header>
             <Menu
-              title="Hey"
+              title=""
               theme="dark"
               mode="horizontal"
               selectedKeys={[this.state.selectedMap]}
@@ -413,7 +403,7 @@ class WhiteboardContainer extends Component {
           </Header>
           <Layout>
             <Sider
-              width={this.state.isDesktop ? "20%" : "70%"}
+              width={this.state.isDesktop ? "20%" : "90%"}
               theme="light"
               breakpoint="lg"
               collapsedWidth="0"
@@ -490,7 +480,6 @@ class WhiteboardContainer extends Component {
                   ref="drawArea"
                   className="site-layout-background"
                   style={{
-                    padding: 24,
                     minHeight: 360,
                     height: "93vh",
                     backgroundColor: this.state.fillWithBackgroundColor

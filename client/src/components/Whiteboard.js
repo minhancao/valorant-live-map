@@ -55,7 +55,6 @@ class Whiteboard extends Component {
     });
 
     this.props.socket.on("clear", () => {
-      console.log("received to clear");
       this.state.whiteboard
         .getContext("2d")
         .clearRect(0, 0, window.innerWidth, window.innerHeight);
@@ -83,7 +82,7 @@ class Whiteboard extends Component {
     context.stroke();
     context.closePath();
 
-    if (!emit) {
+    if (!emit || isNaN(x0) || isNaN(y0)) {
       return;
     }
 
@@ -168,9 +167,9 @@ class Whiteboard extends Component {
     if (!this.state.drawing) {
       return;
     }
-    console.log();
-    const offsetLeft = e.touches[0].clientX;
-    const offsetTop = e.touches[0].clientY;
+    const offsetLeft =
+      e.touches[0].clientX - this.whiteboard.current.offsetLeft;
+    const offsetTop = e.touches[0].clientY - this.whiteboard.current.offsetTop;
     this.setState(() => {
       this.drawLine(
         this.state.currentX,
