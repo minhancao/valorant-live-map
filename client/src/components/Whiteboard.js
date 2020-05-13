@@ -1,5 +1,8 @@
 // Updated. Thanks to: Paul Luna
 import React, { Component } from "react";
+import BindMap from "./imgs/bind.svg";
+import HavenMap from "./imgs/haven.svg";
+import SplitMap from "./imgs/split.svg";
 
 import "antd/dist/antd.css"; // or 'antd/dist/antd.less'
 
@@ -207,11 +210,22 @@ class Whiteboard extends Component {
     // const socket = socketIOClient(this.state.endpoint);
 
     return (
-      <div style={{ cursor: "crosshair" }}>
+      <div
+        style={{
+          cursor: "crosshair",
+        }}
+      >
         <canvas
           height={window.innerHeight}
           width={window.innerWidth}
           ref={this.whiteboard}
+          style={{
+            backgroundImage: `url(${this.props.map})`,
+            backgroundSize: "100% 90vh",
+            backgroundRepeat: "no-repeat",
+            backgroundPosition: "center",
+            marginTop: "-5vh",
+          }}
         ></canvas>
       </div>
     );

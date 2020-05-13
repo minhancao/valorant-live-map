@@ -79,7 +79,9 @@ class WhiteboardContainer extends Component {
     });
 
     socket.on("mapChange", (mapItem, selected) => {
-      this.setState({ map: mapItem, selectedMap: selected });
+      this.setState({ map: mapItem, selectedMap: selected }, () => {
+        this.redrawOnChange(this.state.drawings);
+      });
     });
   }
 
@@ -207,6 +209,40 @@ class WhiteboardContainer extends Component {
     document.body.removeChild(a);
   };
 
+  saveAsPng = () => {
+    this.clearWhiteboard();
+    var canvas = this.whiteboard.current.whiteboard.current;
+    var ctx = canvas.getContext("2d");
+    var currDrawings = this.state.drawings;
+    var bgImage = new Image();
+    bgImage.src = this.state.map;
+    var x = (canvas.width - bgImage.width) * 0.5, // this = image loaded
+      y = (canvas.height - bgImage.height) * 0.5;
+    ctx.drawImage(bgImage, x, y);
+
+    var i = 0;
+    var j = 0;
+    for (i = 0; i < currDrawings.length; i++) {
+      var data = currDrawings[i];
+      for (j = 0; j < data.length; j++) {
+        var data2 = data[j];
+        var { x0, y0, x1, y1, color } = data2;
+        this.drawOnWhiteboard(x0, y0, x1, y1, color);
+      }
+    }
+
+    // trigger a click event on an <a> tag to open the file explorer
+    var link = document.createElement("a");
+    link.setAttribute("download", "data.png");
+    link.setAttribute(
+      "href",
+      canvas.toDataURL("image/png").replace("image/png", "image/octet-stream")
+    );
+    link.click();
+
+    this.redrawOnChange(currDrawings);
+  };
+
   clearWhiteboard = () => {
     var canvas = this.whiteboard.current.whiteboard.current;
     var ctx = canvas.getContext("2d");
@@ -283,17 +319,7 @@ class WhiteboardContainer extends Component {
     var currRedo = this.state.redo;
     currRedo.push(poppedItem);
 
-    this.clearWhiteboard();
-    var i = 0;
-    var j = 0;
-    for (i = 0; i < currDrawings.length; i++) {
-      var data = currDrawings[i];
-      for (j = 0; j < data.length; j++) {
-        var data2 = data[j];
-        var { x0, y0, x1, y1, color } = data2;
-        this.drawOnWhiteboard(x0, y0, x1, y1, color);
-      }
-    }
+    this.redrawOnChange(currDrawings);
     this.setState({ drawings: currDrawings, redo: currRedo });
   };
 
@@ -307,6 +333,11 @@ class WhiteboardContainer extends Component {
     var currDrawings = this.state.drawings;
     currDrawings.push(poppedItem);
 
+    this.redrawOnChange(currDrawings);
+    this.setState({ drawings: currDrawings, redo: currRedo });
+  };
+
+  redrawOnChange = (currDrawings) => {
     this.clearWhiteboard();
     var i = 0;
     var j = 0;
@@ -318,7 +349,6 @@ class WhiteboardContainer extends Component {
         this.drawOnWhiteboard(x0, y0, x1, y1, color);
       }
     }
-    this.setState({ drawings: currDrawings, redo: currRedo });
   };
 
   render() {
@@ -472,6 +502,16 @@ class WhiteboardContainer extends Component {
                     </div>
                   }
                 ></Menu.Item>
+                <Menu.Item
+                  key="12"
+                  icon={
+                    <div>
+                      <Button onClick={() => this.saveAsPng()}>
+                        Save as PNG
+                      </Button>
+                    </div>
+                  }
+                ></Menu.Item>
               </Menu>
             </Sider>
             <Layout style={{ overflowY: "hidden" }}>
@@ -485,10 +525,6 @@ class WhiteboardContainer extends Component {
                     backgroundColor: this.state.fillWithBackgroundColor
                       ? this.state.backgroundColor
                       : "transparent",
-                    backgroundImage: `url(${this.state.map})`,
-                    backgroundSize: "contain",
-                    backgroundRepeat: "no-repeat",
-                    backgroundPosition: "center",
                   }}
                 >
                   {/* <SketchField
@@ -520,6 +556,7 @@ class WhiteboardContainer extends Component {
                     drawStartBoard={this.drawStartBoard}
                     clearWhiteboard={this.clearWhiteboard}
                     handleLoadFromJson={this.handleLoadFromJson}
+                    map={this.state.map}
                   ></Whiteboard>
                 </div>
               </Content>
